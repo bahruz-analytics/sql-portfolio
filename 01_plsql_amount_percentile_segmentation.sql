@@ -1,10 +1,28 @@
 /*
-CASE STUDY: Percentile-Based Amount Segmentation (Fully Masked)
+CASE STUDY / NÜMUNƏ ANALİZ:
+Percentile-Based Amount Segmentation (Fully Masked)
+Faizlər (percentile) əsasında məbləğlərin seqmentasiyası (Maskalanmış)
 
+Description / Təsvir:
+This case study demonstrates how transaction amounts can be segmented
+using percentile-based logic for analytical and business insights.
+
+Bu nümunə analizdə əməliyyat məbləğlərinin faizlər (percentile) əsasında
+kateqoriyalara bölünməsi göstərilir.
+
+Confidentiality / Məxfilik:
 All table and column names are anonymized.
-Business logic and structure are preserved.
+Business logic and query structure are preserved.
+
+Bütün cədvəl və sütun adları maskalanmışdır.
+Biznes məntiqi və sorğunun strukturu qorunub saxlanılmışdır.
 */
 
+------------------------------------------------------------
+-- STEP 1 / ADDIM 1
+-- Calculate percentiles for transaction amounts
+-- Əməliyyat məbləğləri üzrə faizlərin (percentile) hesablanması
+------------------------------------------------------------
 WITH percentile_ AS (
     SELECT
         PERCENTILE_CONT(0.10) WITHIN GROUP (ORDER BY amount_value) AS p10,
@@ -33,6 +51,11 @@ WITH percentile_ AS (
     )
 )
 
+------------------------------------------------------------
+-- STEP 2 / ADDIM 2
+-- Assign percentile-based amount categories
+-- Məbləğlərin faiz intervallarına görə kateqoriyalara bölünməsi
+------------------------------------------------------------
 SELECT
     amount_category,
     COUNT(DISTINCT entity_id) AS entity_count,
@@ -43,9 +66,9 @@ FROM (
         d.entity_id,
         t.amount_value,
         CASE
-            WHEN amount_value < 400   THEN 'Below Threshold'
-            WHEN amount_value < p.p10 THEN '0–10 Percentile'
-            WHEN amount_value < p.p20 THEN '10–20 Percentile'
+            WHEN amount_value < 400   THEN 'Below Threshold'       -- Minimum həddən aşağı
+            WHEN amount_value < p.p10 THEN '0–10 Percentile'       -- 0–10 faiz aralığı
+            WHEN amount_value < p.p20 THEN '10–20 Percentile'      -- 10–20 faiz aralığı
             WHEN amount_value < p.p30 THEN '20–30 Percentile'
             WHEN amount_value < p.p40 THEN '30–40 Percentile'
             WHEN amount_value < p.p50 THEN '40–50 Percentile'
@@ -53,7 +76,7 @@ FROM (
             WHEN amount_value < p.p70 THEN '60–70 Percentile'
             WHEN amount_value < p.p80 THEN '70–80 Percentile'
             WHEN amount_value < p.p90 THEN '80–90 Percentile'
-            ELSE '90-100 Percentile'
+            ELSE '90–100 Percentile'                               -- Ən yüksək məbləğlər
         END AS amount_category
     FROM fact_transactions t
     JOIN dim_entities d
@@ -61,5 +84,10 @@ FROM (
     CROSS JOIN percentile_ p
 )
 
+------------------------------------------------------------
+-- STEP 3 / ADDIM 3
+-- Aggregate results by amount category
+-- Nəticələrin məbləğ kateqoriyası üzrə yekunlaşdırılması
+------------------------------------------------------------
 GROUP BY amount_category
 ORDER BY min_amount;
